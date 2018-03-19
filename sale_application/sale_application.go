@@ -22,6 +22,15 @@
  * Writing Your First Blockchain Application
  */
 
+
+/*
+peer chaincode invoke -o orderer.lyl-network.com:7050  --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/lyl-network.com/orderers/orderer.lyl-network.com/msp/tlscacerts/tlsca.lyl-network.com-cert.pem  -C $CHANNEL_NAME -n sacc -c '{"Args":["makeApplication","{\"applicationId\": \"LEP0000001\",\"seller\": {\"firstName\": \"Riita\",\"lastName\": \"Ratas\",\"personalCode\": \"123456789\"},\"buyer\": {\"firstName\": \"Mari\",\"lastName\": \"Maasikas\",\"personalCode\": \"123456779\"},\"vehicle\": {\"vin\":\"78347837483784\",\"mark\":\"Audi\",\"model\":\"A8\",\"registrationPlate\":\"123ABC\"},\"price\":\"30000.00\",\"status\":\"\"}"]}'
+
+peer chaincode invoke -o orderer.lyl-network.com:7050  --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/lyl-network.com/orderers/orderer.lyl-network.com/msp/tlscacerts/tlsca.lyl-network.com-cert.pem  -C $CHANNEL_NAME -n sacc -c '{"Args":["readApplication","{\"applicationId\": \"LEP0000001\"}"]}'
+
+
+*/
+
 package main
 
 /* Imports
@@ -38,6 +47,7 @@ import (
 	//"reflect"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	sc "github.com/hyperledger/fabric/protos/peer"
+	//"github.com/icrowley/fake"
 )
 
 // Define the Application Contract structure
@@ -75,10 +85,11 @@ const WAITING string="waiting"
 const FINISHED string="finished"
 
 /*
- * The Init method is called when the Smart Contract "sale application" is instantiated by the blockchain network
+ * The Init method is called when the Application Contract "sale application" is instantiated by the blockchain network
  * Best practice is to have any Ledger initialization in separate function -- see initLedger()
  */
-func (s *ApplicationContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
+func (t *ApplicationContract) Init(APIstub shim.ChaincodeStubInterface) sc.Response {
+	fmt.Println("Init")
 	return shim.Success(nil)
 }
 
@@ -86,33 +97,22 @@ func (s *ApplicationContract) Init(APIstub shim.ChaincodeStubInterface) sc.Respo
  * The Invoke method is called as a result of an application request to run the Smart Contract "sale application"
  * The calling application program has also specified the particular smart contract function to be called, with arguments
  */
-func (s *ApplicationContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response {
+func (t *ApplicationContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response {
 
 	// Retrieve the requested Smart Contract function and arguments
 	function, args := APIstub.GetFunctionAndParameters()
 	// Route to the appropriate handler function to interact with the ledger appropriately
 	if function == "makeTestData" {
-		return s.makeTestData(APIstub)
+		return t.makeTestData(APIstub)
 	} else if function == "makeApplication" {
-		return s.makeApplication(APIstub, args)
+		return t.makeApplication(APIstub, args)
 	} else if function == "acceptApplication" {
-		return s.acceptApplication(APIstub, args)
+		return t.acceptApplication(APIstub, args)
 	} else if function == "rejectApplication" {
-		return s.rejectApplication(APIstub, args)
+		return t.rejectApplication(APIstub, args)
 	} else if function == "cancelApplication" {
-		return s.cancelApplication(APIstub, args)
-	}
-	return shim.Error("Invalid Smart Contract function name.")
-}
-
-// Query is our entry point for queries
-func (t *ApplicationContract) Query(APIstub shim.ChaincodeStubInterface) sc.Response {
-	// Retrieve the requested Smart Contract function and arguments
-	function, args := APIstub.GetFunctionAndParameters()
-	fmt.Println("query is running " + function)
-
-	// Handle different functions
-	if function == "getBuyerApplications" { //list of sale applications
+		return t.cancelApplication(APIstub, args)
+	} else if function == "getBuyerApplications" { //list of sale applications
 		return t.getBuyerApplications(APIstub, args)
 	} else if function =="getSellerApplications" {
 		return t.getSellerApplications(APIstub, args)
@@ -120,11 +120,70 @@ func (t *ApplicationContract) Query(APIstub shim.ChaincodeStubInterface) sc.Resp
 		return t.getInApplications(APIstub, args)
 	} else if function =="getOutApplications" {
 		return t.getOutApplications(APIstub, args)
+	} else if function =="readApplication" {
+		return t.readApplication(APIstub, args)
 	}
 
 	fmt.Println("query did not find func: " + function)
   return shim.Error("Received unknown function query: " + function)
 }
+
+/*func (s *ApplicationContract) makeTestData2(APIstub shim.ChaincodeStubInterface) sc.Response {
+	var seller_first_name string
+	var seller_last_name string
+	var seller_peronal_code string
+  var seller Person
+	var buyer Person
+	var buyer_first_name string
+	var buyer_last_name string
+	var buyer_personal_code string
+	var vehicle Vehicle
+  var vehicle_vin string
+	var vehicle_mark string
+  var vehicle_model string
+	var vehicle_registration_plate string
+	var price string
+	var status string
+
+	applicationsIn := []SaleApplication
+
+	j := 0
+
+	for j < 50 {
+		seller_first_name = fake.FirstName()
+		seller_last_name = fake.lastName()
+		seller_peronal_code = "123456791011"
+		seller = Person{FirstName:&seller_first_name,LastName:&seller_last_name,PersonalCode:&seller_personal_code}
+
+		buyer_first_name = fake.FirstName()
+		buyer_last_name = fake.lastName()
+		buyer_personal_code ="123456791011"
+		buyer = Person{FirstName:&buyer_first_name,LastName:&buyer_last_name,PersonalCode:&buyer_personal_code}
+
+		vehicle_vin ="12345678"
+		vehicle_mark =fake.Brand()
+		vehicle_model =fake.Model()
+		vehicle_registration_plate="123ABS"
+		price ="100000.00"
+		status=WAITING
+
+		vehicle = Vehicle{Vin:&vehicle_vin,Mark:&vehicle_mark,Model:&vehicle_model,RegistrationPlate:&vehicle_registration_plate}
+
+		applicationsIn[i]:= SaleApplication{ApplicationId:&applicationId, Seller:&seller, Buyer:&buyer, Vehicle:&vehicle, Price:&price, Status:&status},
+
+	}
+
+	i := 0
+	for i < len(applicationsIn) {
+		fmt.Println("i is ", i)
+		applicationAsBytes, _ := json.Marshal(applicationsIn[i])
+		APIstub.PutState(*applicationsIn[i].ApplicationId, applicationAsBytes)
+		fmt.Println("Added", applicationsIn[i])
+		i = i + 1
+	}
+
+	return shim.Success(nil)
+}*/
 
 func (s *ApplicationContract) makeTestData(APIstub shim.ChaincodeStubInterface) sc.Response {
 	var applicationId string = "100000"
@@ -174,12 +233,25 @@ func (s *ApplicationContract) makeTestData(APIstub shim.ChaincodeStubInterface) 
 func (t *ApplicationContract) validateInput(args []string) (applicationIn SaleApplication, err error) {
 	var applicationId string //application Id
 	var saleApplication SaleApplication = SaleApplication{} //The calling function is expecting an object of type SaleApplication
-
+  fmt.Println("validateInput")
+	// Assumes that we have json input
 	if len(args) !=1 {
 		err = errors.New("Incorrect number of arguments. Expecting a json string with mandatory applicationId")
 		return saleApplication, err
 
 	}
+
+	jsonData:=args[0]
+	applicationId=""
+	stateJSON :=[]byte(jsonData)
+	//fmt.Println("State json"+stateJSON)
+	err = json.Unmarshal(stateJSON,&applicationIn)
+
+	if err!=nil {
+		err = errors.New("Unable to unmarshal input JSON data"+fmt.Sprint(err))
+		return saleApplication, err
+		}
+
 	if applicationIn.ApplicationId !=nil {
 		applicationId = strings.TrimSpace(*applicationIn.ApplicationId)
 		if applicationId=="" {
@@ -194,28 +266,68 @@ func (t *ApplicationContract) validateInput(args []string) (applicationIn SaleAp
 	return applicationIn, nil
 }
 
+// Function is called to read asset information
+func (t *ApplicationContract) readApplication(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+	var applicationID string
+	var err error
+	var saleApplication SaleApplication
+
+	fmt.Println("running readApplication()")
+
+
+	applicationIn,err:=t.validateInput(args)
+	if err!=nil {
+		return shim.Error("Couldn't find the application")
+	}
+
+	applicationID = *applicationIn.ApplicationId
+	applicationAsBytes, err := APIstub.GetState(applicationID)
+	if err!=nil || len(applicationAsBytes)==0{
+		return shim.Error("Unable to get application state from the ledger")
+	}
+
+	err = json.Unmarshal(applicationAsBytes, &saleApplication)
+	if err!=nil {
+		return shim.Error("Unable to unmarshal application data received from the ledger")
+	}
+	fmt.Println("Application status " + *saleApplication.Status)
+	return shim.Success(applicationAsBytes)
+
+}
+
+
 // Function is called in order to make a new application
 func (t *ApplicationContract) makeApplication(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 	var err error
 	var applicationId string
-	var applicationIn SaleApplication
+	//var applicationIn SaleApplication
   var applicationStub SaleApplication
-	var applicationBytes []byte
+	//var applicationBytes []byte
 
 	fmt.Println("running makeApplication()")
 
-
-	applicationIn, err = t.validateInput(args)
-	if err != nil {
+	applicationIn,err:=t.validateInput(args)
+	if err!=nil {
 		return shim.Error(fmt.Sprint(err))
 	}
+	/*if len(args) !=1 {
+		err = errors.New("Incorrect number of arguments. Expecting a json string with mandatory applicationId")
+		return shim.Error(fmt.Sprint(err))
+
+	}
+
+	jsonData:=args[0]
+	stateJSON :=[]byte(jsonData)
+	//fmt.Println("State json"+stateJSON)
+	err = json.Unmarshal(stateJSON,&applicationIn)
+	*/
 
   applicationId = *applicationIn.ApplicationId
-	applicationBytes, err = APIstub.GetState(applicationId)
-	if err != nil || len(applicationBytes) ==0 {
-		applicationStub = applicationIn
+	applicationAsBytes, err := APIstub.GetState(applicationId)
+	if err != nil || len(applicationAsBytes)==0 {
+		applicationStub = applicationIn //The record that goes into stub is the one that came in
 	} else {
-		fmt.Println("else case")
+		fmt.Println("else case: update")
 	}
 
 	/* Possible business rules
@@ -225,15 +337,15 @@ func (t *ApplicationContract) makeApplication(APIstub shim.ChaincodeStubInterfac
 		- Sama auto kohta ei tohi olla teist taotlust
 	*/
 
-
-	stateJSON, err := json.Marshal(applicationStub)
+  *applicationStub.Status = WAITING
+	applicationJSON, err := json.Marshal(applicationStub)
 	if err != nil {
 		return shim.Error("Marshal failed for contract state" + fmt.Sprint(err))
 	}
 	//get existing state from the stub
 
 	//Write the new state to the ledger
-	err = APIstub.PutState(applicationId, stateJSON)
+	err = APIstub.PutState(applicationId, applicationJSON)
 	if err != nil {
 		return shim.Error("Put ledger state failed: "+ fmt.Sprint(err))
 	}
@@ -254,6 +366,11 @@ func (t *ApplicationContract) changeApplicationStatus(APIstub shim.ChaincodeStub
 	fmt.Println("running changeApplicationStatus: " + args[1])
 	/* Possible business rules
 	*/
+
+	
+
+
+
 	return shim.Success(nil)
 }
 
